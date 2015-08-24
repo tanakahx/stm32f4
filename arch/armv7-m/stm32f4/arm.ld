@@ -9,7 +9,7 @@ MEMORY
 
 SECTIONS {
          .vector : {
-                 cpu/cortex-m3/vector.o (.rodata*)
+                 arch/armv7-m/stm32f4/vector.o (.rodata*)
          } > vector
 
          .text : {

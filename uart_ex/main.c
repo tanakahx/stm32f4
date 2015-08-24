@@ -84,31 +84,40 @@ void Reset_Handler()
 
     /* Enable clock for each peripherals */
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
 
     /* PC12~PC15 pin is assigned for GPIO output */
     GPIOD->MODER = 0x55550000;
-    GPIOD->ODR   = 0x0000F000;
+    GPIOD->ODR = 0x0000F000;
     
-    /* Timer interrupting at regular interval */
-    TIM2->PSC  = 0;            /* Timer clock  84 MHz / PSC = 84 MHz */
-    TIM2->ARR  = 84*1000-1;    /* Auto reload: 84 MHz / ARR =  1 KHz */
-    TIM2->DIER = TIM_DIER_UIE; /* Enable update interrupt */
-    TIM2->EGR  = TIM_EGR_UG;   /* Initialize counter */
-    TIM2->SR   = 0;            /* Clear all interrupts */
-    TIM2->CR1 |= TIM_CR1_CEN;  /* Enable counter */
+    GPIOD->MODER |= GPIO_MODER_MODER5_1 | GPIO_MODER_MODER6_1;
+    GPIOD->AFR[0] = (0x7 << (5*4)) | (0x7 << (6*4));
 
-    NVIC_SetPriority(TIM2_IRQn, 2);
-    NVIC_EnableIRQ(TIM2_IRQn);
+    USART2->BRR = 0x16D; /* PCLK = 84MHz, Baud rate = 115200 bps, OVER8 = 0, hence BRR = 22.8125 */
+    USART2->CR1 |= USART_CR1_UE |    /* USART enable */
+                   USART_CR1_TE |    /* Transmitter enable */
+                   USART_CR1_RE |    /* Receiver enable */
+                   USART_CR1_RXNEIE; /* RXNE interrupt enable */
 
+    NVIC_SetPriority(USART2_IRQn, 2);
+    NVIC_EnableIRQ(USART2_IRQn);
+    
     while (1)
         continue;
 }
 
-void TIM2_IRQHandler()
+void USART2_IRQHandler()
 {
-    if (TIM2->SR & TIM_SR_UIF) {
-        TIM2->SR = ~TIM_SR_UIF;   /* Clear update interrupt */
-        GPIOD->ODR ^= 0x0000F000; /* Toggle GPIO output */
+    int d;
+
+    if (USART2->SR & USART_SR_RXNE) {
+        /* RXNE bit is cleared by reading the DR register */
+        d = USART2->DR;
+        
+        /* Echo back the received data */
+        USART2->DR = d;
+
+        /* LED ON (debug) */
+        GPIOD->ODR = 0x0000F000;
     }
 }

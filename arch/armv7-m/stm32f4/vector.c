@@ -1,5 +1,5 @@
 #include "stm32f407xx.h"
-#include "lib.h"
+#include "stdtype.h"
 
 extern unsigned int stack_bottom;
 
